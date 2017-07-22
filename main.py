@@ -94,20 +94,24 @@ class MainWindow(QWidget):
         help_icon.clicked.connect(lambda: self.createNewItem())
         # help_icon.clicked.connect(about.show)
 
-        self.pos = 20
+        self.pos = 0
         self.items = []
         copied_text = pyperclip.paste()
-        if copied_text != "" or copied_text != None or copied_text != " ":
-            self.createNewItem(text=copied_text,type = "copied")
+        if copied_text != "" and copied_text != None and copied_text != " ":
+            self.createNewItem(text=copied_text,box_type = "copied")
+
+        # print("COPIED:"+copied_text+">")
 
         info = QLabel(self)
         info.setText("Made By Ahmad Taha - Version 1.0 Beta")
         info.move(37+2,520)
         info.setStyleSheet("color:grey;")
         self.show()
-    def createNewItem(self,text = None,type = "text"):
+    def createNewItem(self,text = None,box_type = "text"):
         self.mdiSub.close()
         back,border = self.getRandomColor()
+        if box_type == "copied":
+            back,border = "#19B5FE","white"
         if text == None:
             text = fake.text() + fake.text()
         self.items.append(text)
@@ -120,33 +124,44 @@ class MainWindow(QWidget):
 
 
         scrol_Style = "QScrollBar:vertical {border: 0;background:"+back+";}QScrollBar::handle:vertical {background: "+border+";}QScrollBar::handle:vertical::pressed {background-color:"+border+";}QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {background:"+back+";}"
-        btn.text = QTextEdit(self.mdiSub)
-        btn.text.setGeometry(14,self.pos+4,btn.width()-50,100-8)
-        btn.text.setStyleSheet(".QTextEdit{background-color:" + back + ";border:0px solid "+border+";color:"+border+";font-size:14px;text-align:left;}" + scrol_Style)
-        btn.text.setText(text)
-        btn.text.setReadOnly(True)
+        btn.main_text = QTextEdit(self.mdiSub)
+        btn.main_text.setGeometry(14,self.pos+4,btn.width()-50,100-8)
+        if box_type == "copied":
+            btn.main_text.setGeometry(14,self.pos+4+20,btn.width()-50,80-8)
+        btn.main_text.setStyleSheet(".QTextEdit{background-color:" + back + ";border:0px solid "+border+";color:"+border+";font-size:14px;text-align:left;}" + scrol_Style)
+        btn.main_text.setText(text)
+        btn.main_text.setReadOnly(True)
 
         
         deleteIcon = qta.icon('fa.scissors',color=border)
         btn.delete = QPushButton(deleteIcon,"",parent = self.mdiSub)
         btn.delete.setGeometry(self.mdi.width()-88,self.pos+10,30,30)
+        if box_type == "copied":
+            btn.delete.setGeometry(self.mdi.width()-88,self.pos+25,30,30)
         btn.delete.setStyleSheet(".QPushButton{background-color:"+back+";} .QPushButton:hover{border: 1px solid " + border+";}")
         btn.delete.setCursor(Qt.PointingHandCursor)
         btn.delete.setToolTip("Delete")
         btn.delete.clicked.connect(self.deleteItem)
         btn.delete.objectText = text
         
-        addIcon = qta.icon('fa.plus',color=border)
-        btn.add = QPushButton(addIcon,"",parent = self.mdiSub)
-        btn.add.setGeometry(self.mdi.width()-88,self.pos+60,30,30)
-        btn.add.setStyleSheet(".QPushButton{background-color:"+back+";} .QPushButton:hover{border: 1px solid " + border+";}")
-        btn.add.setCursor(Qt.PointingHandCursor)
-        btn.add.setToolTip("Delete")
-        btn.add.clicked.connect(self.deleteItem)
-        btn.add.objectText = text
+        if box_type == "copied":
+            addIcon = qta.icon('fa.plus',color=border)
+            btn.add = QPushButton(addIcon,"",parent = self.mdiSub)
+            btn.add.setGeometry(self.mdi.width()-88,self.pos+65,30,30)
+            btn.add.setStyleSheet(".QPushButton{background-color:"+back+";} .QPushButton:hover{border: 1px solid " + border+";}")
+            btn.add.setCursor(Qt.PointingHandCursor)
+            btn.add.setToolTip("Delete")
+            btn.add.clicked.connect(self.deleteItem)
+
+            btn.head = QPushButton(self.mdiSub)
+            btn.head.setGeometry(10,self.pos,btn.width(),20)
+            btn.head.setStyleSheet("background-color:#22A7F0;color:white;text-align:left;padding-left:10px;")
+            btn.head.setText("Copied Text")
+
+            btn.main_text.setObjectName("copied")
 
         position_animator(btn,-500,btn.y(),10,btn.y(),duration=600)
-        position_animator(btn.text,-500,btn.text.y(),14,btn.text.y(),duration=700)
+        position_animator(btn.main_text,-500,btn.main_text.y(),14,btn.main_text.y(),duration=700)
         position_animator(btn.delete,-500,btn.delete.y(),self.mdi.width()-88,btn.delete.y(),duration=500)
 
         if len(self.items) <= 3:
@@ -161,22 +176,27 @@ class MainWindow(QWidget):
         self.mdiSub.show()
     def deleteItem(self):
         btn  = self.findChild(QPushButton,self.sender().objectText)
+        
         self.items.remove(btn.objectName())
 
         position_animator(btn,btn.x(),btn.y(),-500,btn.y(),duration=800)
-        position_animator(btn.text,btn.text.x(),btn.text.y(),-500,btn.text.y(),duration=1000)
+        position_animator(btn.main_text,btn.main_text.x(),btn.main_text.y(),-500,btn.main_text.y(),duration=1000)
         position_animator(btn.delete,btn.delete.x(),btn.delete.y(),-500,btn.delete.y(),duration=700)
 
-        self.pos = 20
+        self.pos = 0
 
         for i in self.items:
             btn  = self.findChild(QPushButton,i)
+            if "copied" in btn.main_text.objectName():
+                self.pos += 120
+                continue
             position_animator(btn,btn.x(),btn.y(),10,self.pos)
-            position_animator(btn.text,btn.text.x(),btn.text.y(),14,self.pos+4)
+            position_animator(btn.main_text,btn.main_text.x(),btn.main_text.y(),14,self.pos+4)
             position_animator(btn.delete,btn.delete.x(),btn.delete.y(),self.mdi.width()-88,self.pos+20)
+
             self.pos +=120
 
-        self.mdiSub.resize(self.mdiSub.width(),self.pos)
+        self.mdiSub.resize(self.mdiSub.width(),self.pos+120)
         self.scroller.setMaximum(self.pos)
     def scroll(self):
         value = self.scroller.value()
