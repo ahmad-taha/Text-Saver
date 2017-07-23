@@ -96,9 +96,16 @@ class MainWindow(QWidget):
 
         self.pos = 0
         self.items = []
+        self.copiedBtnVisible = False
+
+
         copied_text = pyperclip.paste()
         if copied_text != "" and copied_text != None and copied_text != " ":
             self.createNewItem(text=copied_text,box_type = "copied")
+
+        CThread2 = self.Clipboard_Thread()
+        self.connect(CThread2, CThread2.signal, lambda: self.createNewItem(box_type="copied"))
+        CThread2.start()
 
         # print("COPIED:"+copied_text+">")
 
@@ -107,16 +114,39 @@ class MainWindow(QWidget):
         info.move(37+2,520)
         info.setStyleSheet("color:grey;")
         self.show()
+    class Clipboard_Thread(QtCore.QThread):
+        def __init__(self):
+            QtCore.QThread.__init__(self, parent=None)
+            self.signal = QtCore.SIGNAL("signal")
+        def run(self):
+            old_text = pyperclip.paste()
+            while True:
+                text = pyperclip.paste()
+                if text != old_text:
+                    self.emit(self.signal)
+                old_text = text
+                time.sleep(1)
+                
     def createNewItem(self,text = None,box_type = "text"):
+        if text == None:
+            if box_type == "copied":
+                text = pyperclip.paste()
+            else:
+                text = fake.text() + fake.text()
+        if box_type == "copied" and self.copiedBtnVisible == True:
+            self.copiedBtn.main_text.setText(text)
+            return
+        if text in self.items:
+            # TODO : notify already listed item
+            return
         self.mdiSub.close()
         back,border = self.getRandomColor()
         if box_type == "copied":
             back,border = "#19B5FE","white"
-        if text == None:
-            text = fake.text() + fake.text()
         self.items.append(text)
-        # text="Just a Text!\nAnd More Text!\nAnd More...\nSDAkjasfsssssssssssssssssssssssssssssssssssssssssssssssssssssssslkdh\naskdjhsakdahsd\nasddsd\nlast"
-        
+
+
+
         btn = QPushButton(self.mdiSub)
         btn.setGeometry(10,self.pos,self.mdiSub.width()-40,100)
         btn.setStyleSheet(".QPushButton{background-color:" + back + ";border:0px solid "+border+";color:"+border+";font-size:14px;text-align:left;padding-left:7px;}")
@@ -151,7 +181,7 @@ class MainWindow(QWidget):
             btn.add.setStyleSheet(".QPushButton{background-color:"+back+";} .QPushButton:hover{border: 1px solid " + border+";}")
             btn.add.setCursor(Qt.PointingHandCursor)
             btn.add.setToolTip("Delete")
-            btn.add.clicked.connect(self.deleteItem)
+            btn.add.clicked.connect(lambda: self.createNewItem(text = btn.main_text.toPlainText()))
 
             btn.head = QPushButton(self.mdiSub)
             btn.head.setGeometry(10,self.pos,btn.width(),20)
@@ -160,9 +190,16 @@ class MainWindow(QWidget):
 
             btn.main_text.setObjectName("copied")
 
+            self.copiedBtnVisible = True
+
+            self.copiedBtn = btn
+
         position_animator(btn,-500,btn.y(),10,btn.y(),duration=600)
         position_animator(btn.main_text,-500,btn.main_text.y(),14,btn.main_text.y(),duration=700)
         position_animator(btn.delete,-500,btn.delete.y(),self.mdi.width()-88,btn.delete.y(),duration=500)
+        if box_type == "copied":
+            position_animator(btn.add,-500,btn.add.y(),self.mdi.width()-88,btn.add.y(),duration=500)
+            position_animator(btn.head,-500,btn.head.y(),10,btn.head.y(),duration=600)
 
         if len(self.items) <= 3:
             self.scroller.move(20,0)
@@ -183,6 +220,11 @@ class MainWindow(QWidget):
         position_animator(btn.main_text,btn.main_text.x(),btn.main_text.y(),-500,btn.main_text.y(),duration=1000)
         position_animator(btn.delete,btn.delete.x(),btn.delete.y(),-500,btn.delete.y(),duration=700)
 
+        if "copied" in btn.main_text.objectName():
+            self.copiedBtnVisible = False
+            position_animator(btn.add,btn.add.x(),btn.add.y(),-500,btn.add.y(),duration=500)
+            position_animator(btn.head,btn.head.x(),btn.head.y(),-500,btn.head.y(),duration=600)
+    
         self.pos = 0
 
         for i in self.items:
